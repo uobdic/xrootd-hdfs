@@ -13,13 +13,14 @@
         ],
 
         // Set *default* container specific settings.json values on container create.
-        "settings": {
-                "terminal.integrated.shell.linux": "/bin/bash"
-        },
+        // "settings": {
+        //         "terminal.integrated.shell.linux": "/bin/bash"
+        // },
 
         // Add the IDs of extensions you want installed when the container is created.
         "extensions": [
-                "ms-vscode.cpptools"
+                "ms-vscode.cpptools",
+                "twxs.cmake"
         ]
 
         // Use 'forwardPorts' to make a list of ports inside the container available locally.
