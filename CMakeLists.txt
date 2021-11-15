@@ -6,7 +6,7 @@ set( CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake )
 
 find_package( Xrootd REQUIRED )
 find_package( Hdfs REQUIRED )
-find_package( Jvm REQUIRED )
+# find_package( Jvm REQUIRED )
 find_package( Dl REQUIRED )
 
 if(NOT XROOTD_PLUGIN_VERSION)
@@ -42,7 +42,8 @@ SET( CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-undefined")
 SET( CMAKE_MODULE_LINKER_FLAGS "-Wl,--no-undefined")
 SET( CMAKE_EXE_LINKER_FLAGS "-Wl,--no-undefined")
 
-include_directories(${HDFS_INCLUDES} ${JVM_INCLUDES} ${JVM_MD_INCLUDES} ${LIBCRYPTO_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
+# include_directories(${HDFS_INCLUDES} ${JVM_INCLUDES} ${JVM_MD_INCLUDES} ${LIBCRYPTO_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
+include_directories(${HDFS_INCLUDES} ${LIBCRYPTO_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
 
 include_directories( "${PROJECT_SOURCE_DIR}" "${XROOTD_INCLUDES}" )
 
