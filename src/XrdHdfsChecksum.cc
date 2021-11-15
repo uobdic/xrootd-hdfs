@@ -1,60 +1,63 @@
-#include <sstream>
 #include <algorithm>
+#include <sstream>
 
 #include "XrdVersion.hh"
 
 #include "XrdHdfsChecksum.hh"
 
 #include "XrdOss/XrdOss.hh"
-#include "XrdSfs/XrdSfsInterface.hh"
 #include "XrdSec/XrdSecEntity.hh"
+#include "XrdSfs/XrdSfsInterface.hh"
 #include "XrdSys/XrdSysError.hh"
 
 XrdVERSIONINFO(XrdCksInit, XrdHdfsChecksum)
 
-using namespace XrdHdfs;
+    using namespace XrdHdfs;
 class XrdSfsFileSystem;
 
 typedef std::pair<std::string, std::string> ChecksumValue;
 typedef std::vector<ChecksumValue> ChecksumValues;
 
-extern XrdOss *g_hdfs_oss;
+extern XrdOss* g_hdfs_oss;
 
-extern "C" {
-
-XrdCks *XrdCksInit(XrdSysError *eDest,
-                   const char *config_fn,
-                   const char *params)
+extern "C"
 {
-    XrdCks *cks = new ChecksumManager(*eDest);
-    eDest->Emsg("ChecksumManager", "Initializing checksum manager with config file", config_fn);
-    cks->Init(config_fn);
-    return cks;
-}
 
+    XrdCks* XrdCksInit(XrdSysError* eDest,
+        const char* config_fn,
+        const char* params)
+    {
+        XrdCks* cks = new ChecksumManager(*eDest);
+        eDest->Emsg("ChecksumManager", "Initializing checksum manager with config file", config_fn);
+        cks->Init(config_fn);
+        return cks;
+    }
 }
-
 
 ChecksumManager::ChecksumManager(XrdSysError& log)
-    : XrdCks(&log),
-      m_log(log),
-      m_client(0, 0, &m_client_sec)
+    : XrdCks(&log)
+    , m_log(log)
+    , m_client(0, 0, &m_client_sec)
 {
-     m_client_sec.name = strdup("root");
+    m_client_sec.name = strdup("root");
 }
 
-
-int
-ChecksumManager::GetFileContents(const char *pfn, std::string &result) const
+int ChecksumManager::GetFileContents(const char* pfn, std::string& result) const
 {
-    if (!g_hdfs_oss) {return -ENOMEM;}
+    if (!g_hdfs_oss)
+    {
+        return -ENOMEM;
+    }
 
     std::string checksum_path = GetChecksumFilename(pfn);
 
-    XrdOssDF *checksum_file = g_hdfs_oss->newFile("checksum_manager");
-    if (!checksum_file) {return -ENOMEM;}
+    XrdOssDF* checksum_file = g_hdfs_oss->newFile("checksum_manager");
+    if (!checksum_file)
+    {
+        return -ENOMEM;
+    }
 
-    int rc = checksum_file->Open(checksum_path.c_str(), SFS_O_RDONLY, 0, const_cast<XrdOucEnv &>(m_client));
+    int rc = checksum_file->Open(checksum_path.c_str(), SFS_O_RDONLY, 0, const_cast<XrdOucEnv&>(m_client));
     if (rc)
     {
         return rc;
@@ -71,9 +74,8 @@ ChecksumManager::GetFileContents(const char *pfn, std::string &result) const
     {
         do
         {
-            retval = checksum_file->Read(&read_buffer[0], offset, buffer_size-1);
-        }
-        while (retval == -EINTR);
+            retval = checksum_file->Read(&read_buffer[0], offset, buffer_size - 1);
+        } while (retval == -EINTR);
 
         if (retval > 0)
         {
@@ -81,8 +83,7 @@ ChecksumManager::GetFileContents(const char *pfn, std::string &result) const
             ss << &read_buffer[0];
             offset += retval;
         }
-    }
-    while (retval > 0);
+    } while (retval > 0);
     checksum_file->Close();
     delete checksum_file;
 
@@ -96,13 +97,11 @@ ChecksumManager::GetFileContents(const char *pfn, std::string &result) const
     return 0;
 }
 
-
-int
-ChecksumManager::Parse(const std::string &checksum_contents, ChecksumValues &result)
+int ChecksumManager::Parse(const std::string& checksum_contents, ChecksumValues& result)
 {
-    const char *ptr = checksum_contents.c_str();
+    const char* ptr = checksum_contents.c_str();
     std::vector<char> checksum_buffer;
-    checksum_buffer.reserve(checksum_contents.size()+1);
+    checksum_buffer.reserve(checksum_contents.size() + 1);
     unsigned int length = 0;
     std::string cksum_value;
 
@@ -113,7 +112,7 @@ ChecksumManager::Parse(const std::string &checksum_contents, ChecksumValues &res
             m_log.Emsg("Parse", "Too-short entry for checksum");
             return -EIO;
         }
-        char *val = strchr(&checksum_buffer[0], ':');
+        char* val = strchr(&checksum_buffer[0], ':');
         if (val == NULL)
         {
             m_log.Emsg("Parse", "Invalid format of checksum entry.");
@@ -150,9 +149,7 @@ ChecksumManager::Parse(const std::string &checksum_contents, ChecksumValues &res
     return 0;
 }
 
-
-int
-ChecksumManager::Init(const char * /*config_fn*/, const char *default_checksum)
+int ChecksumManager::Init(const char* /*config_fn*/, const char* default_checksum)
 {
     if (default_checksum)
     {
@@ -162,20 +159,22 @@ ChecksumManager::Init(const char * /*config_fn*/, const char *default_checksum)
 }
 
 std::string
-ChecksumManager::GetChecksumFilename(const char * pfn) const
+ChecksumManager::GetChecksumFilename(const char* pfn) const
 {
-    if (!pfn) {return "";}
+    if (!pfn)
+    {
+        return "";
+    }
 
     std::string filename = "/cksums/";
     filename += pfn;
     return filename;
 }
 
-int
-ChecksumManager::Get(const char *pfn, XrdCksData &cks)
+int ChecksumManager::Get(const char* pfn, XrdCksData& cks)
 {
     std::string checksum_path = GetChecksumFilename(pfn);
-    const char *requested_checksum = cks.Name ? cks.Name : m_default_digest.c_str();
+    const char* requested_checksum = cks.Name ? cks.Name : m_default_digest.c_str();
     if (!strlen(requested_checksum))
     {
         requested_checksum = "adler32";
@@ -207,7 +206,8 @@ ChecksumManager::Get(const char *pfn, XrdCksData &cks)
         }
     }
 
-    if (!checksum_value.size()) {
+    if (!checksum_value.size())
+    {
         Del(pfn, cks);
         return -ESRCH;
     }
@@ -226,24 +226,18 @@ ChecksumManager::Get(const char *pfn, XrdCksData &cks)
     return 0;
 }
 
-
-int
-ChecksumManager::Del(const char *pfn, XrdCksData &cks)
+int ChecksumManager::Del(const char* pfn, XrdCksData& cks)
 {
     return g_hdfs_oss->Unlink(pfn);
 }
 
-
-int
-ChecksumManager::Config(const char *token, char *line)
+int ChecksumManager::Config(const char* token, char* line)
 {
     m_log.Emsg("Config", "ChecksumManager config variable passed", token, line);
     return 1;
 }
 
-
-char *
-ChecksumManager::List(const char *pfn, char *buff, int blen, char separator)
+char* ChecksumManager::List(const char* pfn, char* buff, int blen, char separator)
 {
     std::string checksum_contents;
     int rc = GetFileContents(pfn, checksum_contents);
@@ -281,8 +275,7 @@ ChecksumManager::List(const char *pfn, char *buff, int blen, char separator)
     return buff;
 }
 
-
-const char *
+const char*
 ChecksumManager::Name(int seq_num)
 {
     switch (seq_num)
@@ -298,9 +291,7 @@ ChecksumManager::Name(int seq_num)
     }
 }
 
-
-int
-ChecksumManager::Ver(const char *pfn, XrdCksData &cks)
+int ChecksumManager::Ver(const char* pfn, XrdCksData& cks)
 {
     XrdCksData cks_on_disk;
     int rc = Get(pfn, cks_on_disk);
@@ -316,19 +307,24 @@ ChecksumManager::Ver(const char *pfn, XrdCksData &cks)
     return !memcmp(cks_on_disk.Value, cks.Value, cks.Length) ? 0 : 1;
 }
 
-
-int
-ChecksumManager::Size(const char *name)
+int ChecksumManager::Size(const char* name)
 {
-    if (!strcasecmp(name, "md5")) {return 16;}
-    else if (!strcasecmp(name, "adler32")) {return 5;}
-    else if (!strcasecmp(name, "cksum")) {return 5;}
+    if (!strcasecmp(name, "md5"))
+    {
+        return 16;
+    }
+    else if (!strcasecmp(name, "adler32"))
+    {
+        return 5;
+    }
+    else if (!strcasecmp(name, "cksum"))
+    {
+        return 5;
+    }
     return -1;
 }
 
-
-int
-ChecksumManager::Set(const char *pfn, XrdCksData &cks, int mtime)
+int ChecksumManager::Set(const char* pfn, XrdCksData& cks, int mtime)
 {
     std::string checksum_contents;
     int rc = GetFileContents(pfn, checksum_contents);
@@ -345,8 +341,9 @@ ChecksumManager::Set(const char *pfn, XrdCksData &cks, int mtime)
 
     std::string checksum_name(cks.Name);
     std::transform(checksum_name.begin(), checksum_name.end(), checksum_name.begin(), ::toupper);
-    std::vector<char> checksum_value; checksum_value.reserve(cks.Length*2 + 1);
-    cks.Get(&checksum_value[0], cks.Length*2 + 1);
+    std::vector<char> checksum_value;
+    checksum_value.reserve(cks.Length * 2 + 1);
+    cks.Get(&checksum_value[0], cks.Length * 2 + 1);
     bool overwrote_value = false;
     bool changed_value = true;
 
@@ -356,7 +353,7 @@ ChecksumManager::Set(const char *pfn, XrdCksData &cks, int mtime)
     {
         std::string cur_checksum_name = iter->first;
         std::transform(cur_checksum_name.begin(), cur_checksum_name.end(),
-                       cur_checksum_name.begin(), ::toupper);
+            cur_checksum_name.begin(), ::toupper);
         if (cur_checksum_name == checksum_name)
         {
             if (!strcmp(iter->second.c_str(), &checksum_value[0]))
@@ -386,9 +383,7 @@ ChecksumManager::Set(const char *pfn, XrdCksData &cks, int mtime)
     return SetMultiple(pfn, values);
 }
 
-
-int
-ChecksumManager::SetMultiple(const char *pfn, const ChecksumValues &values) const
+int ChecksumManager::SetMultiple(const char* pfn, const ChecksumValues& values) const
 {
     std::stringstream ss;
     for (ChecksumValues::const_iterator iter = values.begin();
@@ -397,17 +392,20 @@ ChecksumManager::SetMultiple(const char *pfn, const ChecksumValues &values) cons
     {
         std::string cur_checksum_name = iter->first;
         std::transform(cur_checksum_name.begin(), cur_checksum_name.end(),
-                       cur_checksum_name.begin(), ::toupper);
+            cur_checksum_name.begin(), ::toupper);
 
         ss << cur_checksum_name << ":" << iter->second << std::endl;
     }
     std::string result = ss.str();
 
-    XrdOssDF *fh = g_hdfs_oss->newFile("checksum_set");
-    if (!fh) {return -ENOMEM;}
+    XrdOssDF* fh = g_hdfs_oss->newFile("checksum_set");
+    if (!fh)
+    {
+        return -ENOMEM;
+    }
 
     std::string checksum_pfn = GetChecksumFilename(pfn);
-    int rc = fh->Open(checksum_pfn.c_str(), SFS_O_WRONLY, 0, const_cast<XrdOucEnv &>(m_client));
+    int rc = fh->Open(checksum_pfn.c_str(), SFS_O_WRONLY, 0, const_cast<XrdOucEnv&>(m_client));
     if (rc)
     {
         return rc;
@@ -420,15 +418,13 @@ ChecksumManager::SetMultiple(const char *pfn, const ChecksumValues &values) cons
         do
         {
             retval = fh->Write(result.c_str() + offset, offset, result.size() - offset);
-        }
-        while (retval == -EINTR);
+        } while (retval == -EINTR);
 
         if (retval > 0)
         {
             offset += retval;
         }
-    }
-    while ((retval > 0) && (offset < static_cast<off_t>(result.size())));
+    } while ((retval > 0) && (offset < static_cast<off_t>(result.size())));
     fh->Close();
     delete fh;
 
