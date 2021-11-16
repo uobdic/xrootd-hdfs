@@ -28,11 +28,7 @@ XrdOss* g_hdfs_oss = NULL;
 
 extern "C"
 {
-
-    XrdOss* XrdOssGetStorageSystem(XrdOss* native_oss,
-        XrdSysLogger* Logger,
-        const char* config_fn,
-        const char* parms)
+    XrdOss* XrdOssGetStorageSystem(XrdOss* native_oss, XrdSysLogger* Logger, const char* config_fn, const char* parms)
     {
         if (g_hdfs_oss)
         {
@@ -52,8 +48,11 @@ static int loadJvm()
 {
     // GROSS!
     const char* path = getenv("LD_LIBRARY_PATH");
-    if (!path)
+    // beacon 1a: checking LD_LIBRARY_PATH
+    if (!path){
+        HdfsBootstrapEroute.Emsg("loadJvm", "LD_LIBRARY_PATH not set");
         return 1;
+    }
     size_t path_len = strlen(path);
     const char* next = strchr(path, ':');
     size_t len = next ? (next - path) : path_len;
@@ -62,11 +61,55 @@ static int loadJvm()
     while (1)
     {
         if (len + strlen("/libjvm.so") >= BUFSIZE)
+        {
+            HdfsBootstrapEroute.Emsg("loadJvm", "LD_LIBRARY_PATH too long");
             return 1;
+        }
         if (len)
         {
             strncpy(buf, path, len);
             strncpy(buf + len, "/libjvm.so", BUFSIZE - len);
+            if (dlopen(buf, RTLD_GLOBAL | RTLD_LAZY))
+                return 0;
+        }
+
+        if (!next)
+            break;
+        path = next + 1;
+        if (*path == '\0')
+            break;
+        next = strchr(path, ':');
+        len = next ? (next - path) : strlen(path);
+    }
+    return 1;
+}
+
+// beacon 4: loading libhdfs.so
+static int loadLibHdfs()
+{
+    // GROSS!
+    const char* path = getenv("LD_LIBRARY_PATH");
+    if (!path)
+    {
+        HdfsBootstrapEroute.Emsg("loadLibHdfs", "LD_LIBRARY_PATH not set");
+        return 1;
+    }
+    size_t path_len = strlen(path);
+    const char* next = strchr(path, ':');
+    size_t len = next ? (next - path) : path_len;
+    char buf[BUFSIZE];
+    memset(buf, 0, BUFSIZE);
+    while (1)
+    {
+        if (len + strlen("/libhdfs.so") >= BUFSIZE)
+        {
+            HdfsBootstrapEroute.Emsg("loadLibHdfs", "LD_LIBRARY_PATH too long");
+            return 1;
+        }
+        if (len)
+        {
+            strncpy(buf, path, len);
+            strncpy(buf + len, "/libhdfs.so", BUFSIZE - len);
             if (dlopen(buf, RTLD_GLOBAL | RTLD_LAZY))
                 return 0;
         }
@@ -95,18 +138,41 @@ static XrdOss* Bootstrap(XrdOss* native_oss, XrdSysLogger* Logger, const char* c
 
     // Load the JVM from the environment we just computed.
     // The dynamic linker only pays attention to the LD_LIBRARY_PATH the process was started with.
-    loadJvm();
-
+    // beacon 1: check if the JVM lib is loaded
     HdfsBootstrapEroute.logger(Logger);
-    myLib = new XrdSysPlugin(&HdfsBootstrapEroute, "libXrdHdfsReal-" XRDPLUGIN_SOVERSION ".so");
-    if (!myLib)
+    HdfsBootstrapEroute.Say("Loading Hadoop module.");
+
+    bool loadedJvm = loadJvm() == 0;
+    if (!loadedJvm)
+    {
+        HdfsBootstrapEroute.Emsg("Bootstrap", "Failed to load JVM from LD_LIBRARY_PATH");
         return 0;
+    }
+
+    bool loadedLibHdfs = loadLibHdfs() == 0;
+    if (!loadedLibHdfs)
+    {
+        HdfsBootstrapEroute.Emsg("Bootstrap", "Failed to load libhdfs.so from LD_LIBRARY_PATH");
+        return 0;
+    }
+
+    myLib = new XrdSysPlugin(&HdfsBootstrapEroute, "libXrdHdfsReal-" XRDPLUGIN_SOVERSION ".so");
+    // beacon 2: check if HDFS plugin can be loaded
+    if (myLib == nullptr)
+    {
+        HdfsBootstrapEroute.Emsg("Bootstrap", "Failed to load xrootd-hdfs plugin.");
+        return 0;
+    }
 
     // Now get the entry point of the object creator
     //
     ep = (XrdOss * (*)(XrdOss*, XrdSysLogger*, const char*, const char*))(myLib->getPlugin("XrdOssGetStorageSystem"));
+    // beacon 3: check if the plugin can be loaded
     if (!ep)
+    {
+        HdfsBootstrapEroute.Emsg("Bootstrap", "Failed to load XrdOssGetStorageSystem from the xrootd-hdfs plugin.");
         return 0;
+    }
 
     // Pass on the initialization to that module.
     //
@@ -124,6 +190,7 @@ static int CheckEnvVar(const char* var, const char* input)
     return 0;
 }
 
+// TODO: this should be constexpr
 static const char* command_string = "source /etc/sysconfig/xrootd-hdfs && /usr/libexec/xrootd-hdfs/xrootd_hdfs_envcheck";
 
 static int DetermineEnvironment()
