@@ -1,0 +1,21 @@
+env:
+  # Path to the CMake build directory.
+  build: '${{ github.workspace }}/build'
+  config: 'RelWithDebInfo'
+
+jobs:
+  build:
+    on: push
+    name: CMake Build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure CMake
+        uses: docker://${{ secrets.DOCKER_HUB_USERNAME }}/xrootd-hdfs-build:latest
+        run: cmake3 -B ${{ env.build }} -DCMAKE_BUILD_TYPE=${{ env.config }}
+      
+      - name: Build CMake
+        uses: docker://${{ secrets.DOCKER_HUB_USERNAME }}/xrootd-hdfs-build:latest
+        run: cmake3 --build ${{ env.build }} --config ${{ env.config }}
