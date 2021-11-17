@@ -49,7 +49,8 @@ static int loadJvm()
     // GROSS!
     const char* path = getenv("LD_LIBRARY_PATH");
     // beacon 1a: checking LD_LIBRARY_PATH
-    if (!path){
+    if (!path)
+    {
         HdfsBootstrapEroute.Emsg("loadJvm", "LD_LIBRARY_PATH not set");
         return 1;
     }
@@ -156,6 +157,14 @@ static XrdOss* Bootstrap(XrdOss* native_oss, XrdSysLogger* Logger, const char* c
         return 0;
     }
 
+    auto libXrdHdfsReal = dlopen("libXrdHdfsReal-" XRDPLUGIN_SOVERSION ".so", RTLD_NOW);
+    if (!libXrdHdfsReal)
+    {
+        const char* eTxt = dlerror();
+        HdfsBootstrapEroute.Emsg("Bootstrap", "Failed to dlopen libXrdHdfsReal-" XRDPLUGIN_SOVERSION ".so", eTxt);
+        return 0;
+    }
+
     myLib = new XrdSysPlugin(&HdfsBootstrapEroute, "libXrdHdfsReal-" XRDPLUGIN_SOVERSION ".so");
     // beacon 2: check if HDFS plugin can be loaded
     if (myLib == nullptr)
@@ -190,8 +199,8 @@ static int CheckEnvVar(const char* var, const char* input)
     return 0;
 }
 
-// TODO: this should be constexpr
-static const char* command_string = "source /etc/sysconfig/xrootd-hdfs && /usr/libexec/xrootd-hdfs/xrootd_hdfs_envcheck";
+// TODO: paths should be configurable
+static const char* command_string = "source /opt/hadoop/etc/hadoop/hadoop-env.sh && /usr/libexec/xrootd-hdfs/xrootd_hdfs_envcheck";
 
 static int DetermineEnvironment()
 {
