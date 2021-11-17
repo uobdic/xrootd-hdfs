@@ -92,6 +92,13 @@ ExtractAuthName(const XrdOucEnv* client)
     if (client && (sec = client->secEnv()))
     {
         std::string username;
+        // how does this compare to request.login.username?
+        // see https://github.com/xrootd/xrootd/blob/44ce75906811a1786b8a1ae7bbbc4bfbec2ff46b/src/XrdXrootd/XrdXrootdXeq.cc#L935
+        std::cout << "ExtractAuthName(sec): " << sec->name << std::endl;
+        if (sec->eaAPI->Get("request.name", username))
+        {
+            std::cout << "ExtractAuthName(request.name): " << username << std::endl;
+        }
         return sec->eaAPI->Get("request.name", username) ? username : (sec->name ? sec->name : "nobody");
     }
     else
