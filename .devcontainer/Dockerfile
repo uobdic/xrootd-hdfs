@@ -26,7 +26,7 @@ ARG HADOOP_VERSION=hadoop-3.3.1
 RUN wget https://dlcdn.apache.org/hadoop/common/hadoop-3.3.1/${HADOOP_VERSION}.tar.gz \
  && tar -xzf ${HADOOP_VERSION}.tar.gz \
  && rm -f ${HADOOP_VERSION}.tar.gz \
-    && mv ${HADOOP_VERSION} /opt/hadoop \
+ && mv ${HADOOP_VERSION} /opt/hadoop
 
 ENV HDFS_INCLUDE_DIR /opt/hadoop/include
 ENV HDFS_LIB_DIR /opt/hadoop/lib/native
