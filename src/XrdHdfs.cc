@@ -94,11 +94,6 @@ ExtractAuthName(const XrdOucEnv* client)
         std::string username;
         // how does this compare to request.login.username?
         // see https://github.com/xrootd/xrootd/blob/44ce75906811a1786b8a1ae7bbbc4bfbec2ff46b/src/XrdXrootd/XrdXrootdXeq.cc#L935
-        std::cout << "ExtractAuthName(sec): " << sec->name << std::endl;
-        if (sec->eaAPI->Get("request.name", username))
-        {
-            std::cout << "ExtractAuthName(request.name): " << username << std::endl;
-        }
         return sec->eaAPI->Get("request.name", username) ? username : (sec->name ? sec->name : "nobody");
     }
     else
@@ -111,7 +106,9 @@ hdfsFS hadoop_connect(const XrdOucEnv* client)
 {
     std::string username = ExtractAuthName(client);
     errno = 0;
-    return hadoop_connect("default", 0, username.c_str());
+    // ignore user name for now and just use xrootd's default
+    // return hadoop_connect("default", 0, username.c_str());
+    return hadoop_connect("default", 0, "xrootd");
 }
 
 }
