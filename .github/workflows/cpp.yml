@@ -3,10 +3,11 @@ env:
   build: '${{ github.workspace }}/build'
   config: 'RelWithDebInfo'
 
+on: push
+name: CMake Build
+
 jobs:
   build:
-    on: push
-    name: CMake Build
     runs-on: ubuntu-latest
     
     steps:
