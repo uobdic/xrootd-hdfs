@@ -378,7 +378,9 @@ int ChecksumManager::Calc(const char* pfn, XrdCksData& cks, int do_set)
 
     ChecksumState state(digests);
 
-    const static int buffer_size = 256 * 1024;
+    // TODO: this should be taken from config (ofs.cksrdsz)
+    // original size: 256 * 1024 (256 kB)
+    const static int buffer_size = 256 * 1024 * 1024;
     std::vector<unsigned char> read_buffer;
     read_buffer.reserve(buffer_size);
 
