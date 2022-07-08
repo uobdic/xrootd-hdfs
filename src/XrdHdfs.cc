@@ -35,7 +35,6 @@
 #include "XrdVersion.hh"
 
 #include "XrdHdfs.hh"
-#include "XrdHdfsChecksum.hh"
 
 #define REUSE_CONNECTION 1
 
@@ -391,7 +390,6 @@ XrdHdfsFile::XrdHdfsFile(const char* user)
     , readbuf_partial_hits(0)
     , readbuf_bytes_used(0)
     , readbuf_bytes_loaded(0)
-    , m_state(NULL)
 {
 }
 
@@ -417,7 +415,7 @@ int XrdHdfsFile::Open(const char* path, // In
     mode_t createMode, // In
     XrdOucEnv& client) // In
 /*
-  Function: Open the file `path' in the mode indicated by `openMode'.  
+  Function: Open the file `path' in the mode indicated by `openMode'.
 
   Input:    path      - The fully qualified name of the file to open.
             openMode  - One of the following flag values:
@@ -544,11 +542,6 @@ int XrdHdfsFile::Open(const char* path, // In
     if (err_code != 0)
         return (err_code > 0) ? -err_code : err_code;
 
-    if ((open_flag & O_WRONLY) && (strncmp("/cksums", fname, 7)))
-    {
-        m_state = new ChecksumState(ChecksumManager::ALL);
-    }
-
     return XrdOssOK;
 }
 
@@ -600,19 +593,6 @@ int XrdHdfsFile::Close(long long int*)
     }
     readbuf_lock.UnLock();
 
-    if (m_state)
-    {
-        m_state->Finalize();
-        if (ret == XrdOssOK)
-        {
-            // Only write checksum file if close() was successful
-            XrdHdfs::ChecksumManager manager(HdfsEroute);
-            manager.Set(fname, *m_state);
-        }
-        delete m_state;
-        m_state = NULL;
-    }
-
     if (fname)
     {
         free(fname);
@@ -639,10 +619,6 @@ XrdHdfsFile::~XrdHdfsFile()
     if (readbuf)
     {
         free(readbuf);
-    }
-    if (m_state)
-    {
-        delete m_state;
     }
 }
 
@@ -819,11 +795,6 @@ ssize_t XrdHdfsFile::Write(const void* buff, // In
     if (result >= 0)
     {
         m_nextoff += result;
-    }
-
-    if (m_state)
-    {
-        m_state->Update(static_cast<const unsigned char*>(buff), blen);
     }
 
     return result;

@@ -28,11 +28,6 @@
 class XrdSfsAio;
 class XrdSysLogger;
 
-namespace XrdHdfs
-{
-class ChecksumState;
-}
-
 #define XrdHdfsMAX_PATH_LEN 1024
 /******************************************************************************/
 /*                 X r d H d f s D i r e c t o r y                  */
@@ -157,8 +152,6 @@ private:
     // could eventually be applied more broadly.
     XrdSysMutex readbuf_mutex;
 
-    // Keep track of checksum values for files that are being written.
-    XrdHdfs::ChecksumState* m_state;
 
     bool Connect(const XrdOucEnv&);
 };
