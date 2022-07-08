@@ -3,20 +3,45 @@ env:
   build: '${{ github.workspace }}/build'
   config: 'RelWithDebInfo'
 
-on: push
 name: CMake Build
+
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+    branches:
+      - '*'
+  schedule:
+    - cron:  '23 1 * * 0'
+  release:
+    types: [published]
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+    container: kreczko/xrootd-hdfs-build:latest
+
     steps:
-      - uses: actions/checkout@v2
+      - name: Update xrootd
+        run: |
+          yum update -y
+          yum clean all
+      - name: Clone repository
+        uses: actions/checkout@v2
 
       - name: Configure CMake
-        uses: docker://${{ secrets.DOCKER_HUB_USERNAME }}/xrootd-hdfs-build:latest
-        run: cmake3 -B ${{ env.build }} -DCMAKE_BUILD_TYPE=${{ env.config }}
-      
-      - name: Build CMake
-        uses: docker://${{ secrets.DOCKER_HUB_USERNAME }}/xrootd-hdfs-build:latest
-        run: cmake3 --build ${{ env.build }} --config ${{ env.config }}
+        run: |
+          scl enable devtoolset-8 "cmake3 -B ${{ env.build }} -DCMAKE_BUILD_TYPE=${{ env.config }}"
+
+      - name: Build xrootd-hdfs
+        run: |
+          scl enable devtoolset-8 "make -C ${{ env.build }}"
