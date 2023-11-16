@@ -831,7 +831,6 @@ int XrdHdfsFile::Fstat(struct stat* buf) // Out
 {
     static const char* epname = "stat";
 
-<<<<<<< HEAD
    hdfsFileInfo * fileInfo = hdfsGetPathInfo(m_fs, fname);
 // Execute the function
 //
@@ -849,24 +848,6 @@ int XrdHdfsFile::Fstat(struct stat* buf) // Out
    buf->st_ctime    = fileInfo->mLastMod;
    buf->st_dev      = 0;
    buf->st_ino      = 1; // XRootD assumes offline status when both dev and ino are zero
-=======
-    hdfsFileInfo* fileInfo = hdfsGetPathInfo(m_fs, fname);
-    // Execute the function
-    //
-    if (fileInfo == NULL)
-        return XrdHdfsSys::Emsg(epname, error, errno, "stat", fname);
-    buf->st_mode = fileInfo->mPermissions;
-    buf->st_mode |= (fileInfo->mKind == kObjectKindDirectory) ? S_IFDIR : S_IFREG;
-    buf->st_nlink = (fileInfo->mKind == kObjectKindDirectory) ? 0 : 1;
-    buf->st_uid = 1;
-    buf->st_gid = 1;
-    buf->st_size = (fileInfo->mKind == kObjectKindDirectory) ? 4096 : fileInfo->mSize;
-    buf->st_mtime = fileInfo->mLastMod;
-    buf->st_atime = fileInfo->mLastMod;
-    buf->st_ctime = fileInfo->mLastMod;
-    buf->st_dev = 0;
-    buf->st_ino = 0;
->>>>>>> 9865f08 (applied code format)
 
     hdfsFreeFileInfo(fileInfo, 1);
 
@@ -1047,7 +1028,6 @@ int XrdHdfsSys::Stat(const char* path, // In
         goto cleanup;
     }
 
-<<<<<<< HEAD
    buf->st_mode = fileInfo->mPermissions;
    buf->st_mode |= (fileInfo->mKind == kObjectKindDirectory) ? S_IFDIR : S_IFREG;
    buf->st_nlink = (fileInfo->mKind == kObjectKindDirectory) ? 0 : 1;
@@ -1060,19 +1040,6 @@ int XrdHdfsSys::Stat(const char* path, // In
    buf->st_ctime    = fileInfo->mLastMod;
    buf->st_dev      = 0;
    buf->st_ino      = 1; // XRootD assumes offline status when both dev and ino are zero
-=======
-    buf->st_mode = fileInfo->mPermissions;
-    buf->st_mode |= (fileInfo->mKind == kObjectKindDirectory) ? S_IFDIR : S_IFREG;
-    buf->st_nlink = (fileInfo->mKind == kObjectKindDirectory) ? 0 : 1;
-    buf->st_uid = 1;
-    buf->st_gid = 1;
-    buf->st_size = (fileInfo->mKind == kObjectKindDirectory) ? 4096 : fileInfo->mSize;
-    buf->st_mtime = fileInfo->mLastMod;
-    buf->st_atime = fileInfo->mLastMod;
-    buf->st_ctime = fileInfo->mLastMod;
-    buf->st_dev = 0;
-    buf->st_ino = 0;
->>>>>>> 9865f08 (applied code format)
 
     hdfsFreeFileInfo(fileInfo, 1);
 
